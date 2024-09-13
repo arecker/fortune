@@ -1,0 +1,55 @@
+#!/usr/bin/env python
+"""fortune - artistic inspiration at the terminal."""
+import argparse
+import json
+import pathlib
+import random
+import sys
+import textwrap
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--comment', default='', help='comment output (e.x. ";; ")')
+parser.add_argument('--wrap', type=int, default=0, help='wordwrap length (0 to disable)' )
+
+
+def main():
+    args = parser.parse_args()
+    quotes_file = resolve_quotes_file_path()
+    quote = random.choice(list(load_quotes(quote_file=quotes_file)))
+    author, quotation = quote
+    if args.wrap:
+        quotation = textwrap.fill(
+            quotation, width=args.wrap, fix_sentence_endings=True,
+            break_on_hyphens=True, break_long_words=False,
+        )
+    output = '"{}"\n  -- {}'.format(quotation, author)
+    if args.comment:
+        output = comment_output(output=output, prefix=args.comment)
+    print(output)
+
+
+def comment_output(output, prefix=''):
+    return '\n'.join([prefix + line for line in output.splitlines()])
+
+
+def resolve_quotes_file_path():
+    here = pathlib.Path(__file__).resolve().parent
+    return here / 'quotes.json'
+
+
+def load_quotes(quote_file):
+    try:
+        with open(quote_file, 'r') as f:
+            for obj in json.load(f):
+                author, quotation = obj
+                yield author, quotation
+    except FileNotFoundError:
+        print('quotes file "{}" not found!'.format(quote_file), file=sys.stderr)
+        sys.exit(1)
+    except json.decoder.JSONDecodeError:
+        print('quotes file "{}" is not valid JSON!'.format(quote_file), file=sys.stderr)
+        sys.exit(1)
+
+
+if __name__ == '__main__':
+    main()
