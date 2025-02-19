@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 """fortune - artistic inspiration at the terminal."""
 import argparse
+import datetime
 import json
+import pathlib
 import pathlib
 import random
 import sys
@@ -10,12 +12,26 @@ import textwrap
 parser = argparse.ArgumentParser()
 parser.add_argument('--comment', default='', help='comment output (e.x. ";; ")')
 parser.add_argument('--wrap', type=int, default=0, help='wordwrap length (0 to disable)' )
+parser.add_argument('--skip-cache', type=bool, action=argparse.BooleanOptionalAction, default=False, help='skip cache, print new random quote' )
+parser.add_argument('--clear-cache', type=bool, action=argparse.BooleanOptionalAction, default=False, help='clear cache' )
 
 
 def main():
     args = parser.parse_args()
-    quotes_file = resolve_quotes_file_path()
-    quote = random.choice(list(load_quotes(quote_file=quotes_file)))
+
+    # check cache
+    cache_path = pathlib.Path('~').expanduser() / '.fortune.json'
+    cache = Cache(cache_path)
+
+    if args.skip_cache or args.clear_cache:
+        quote = None
+    else:
+        quote = cache.read()
+
+    if not quote:
+        quotes_file = resolve_quotes_file_path()
+        quote = random.choice(list(load_quotes(quote_file=quotes_file)))
+
     author, quotation = quote
     if args.wrap:
         quotation = textwrap.fill(
@@ -25,6 +41,8 @@ def main():
     output = '"{}"\n  -- {}'.format(quotation, author)
     if args.comment:
         output = comment_output(output=output, prefix=args.comment)
+    if not args.skip_cache:
+        cache.write(quote)
     print(output)
 
 
@@ -49,6 +67,34 @@ def load_quotes(quote_file):
     except json.decoder.JSONDecodeError:
         print('quotes file "{}" is not valid JSON!'.format(quote_file), file=sys.stderr)
         sys.exit(1)
+
+
+class Cache:
+    def __init__(self, path: pathlib.Path):
+        self.path = path
+
+    def read(self):
+        """Returns a quote if there is a cache for today, otherwise returns None"""
+        if not self.path.is_file():
+            return None
+        with self.path.open('r') as f:
+            data = json.load(f)
+
+        if self.today == data.get('date'):
+            return data['quote']
+
+        return None
+
+    def write(self, quote):
+        """Cache a quote for today"""
+        data = {'date': self.today, 'quote': quote}
+        with self.path.open('w') as f:
+            json.dump(data, f)
+
+    @property
+    def today(self) -> str:
+        return datetime.datetime.now().strftime('%Y-%m-%d')
+
 
 
 if __name__ == '__main__':
