@@ -12,8 +12,9 @@ import textwrap
 parser = argparse.ArgumentParser()
 parser.add_argument('--comment', default='', help='comment output (e.x. ";; ")')
 parser.add_argument('--wrap', type=int, default=0, help='wordwrap length (0 to disable)' )
-parser.add_argument('--skip-cache', type=bool, action=argparse.BooleanOptionalAction, default=False, help='skip cache, print new random quote' )
-parser.add_argument('--clear-cache', type=bool, action=argparse.BooleanOptionalAction, default=False, help='clear cache' )
+parser.add_argument('--skip-cache', action='store_true', default=False, help='skip cache, print new random quote' )
+parser.add_argument('--clear-cache', action='store_true', default=False, help='clear cache' )
+parser.add_argument('--author', type=str, default=None, help='return quote from a specific author (ignores cache)')
 
 
 def main():
@@ -23,14 +24,19 @@ def main():
     cache_path = pathlib.Path('~').expanduser() / '.fortune.json'
     cache = Cache(cache_path)
 
-    if args.skip_cache or args.clear_cache:
+    if any([args.skip_cache, args.clear_cache, args.author]):
         quote = None
     else:
         quote = cache.read()
 
     if not quote:
         quotes_file = resolve_quotes_file_path()
-        quote = random.choice(list(load_quotes(quote_file=quotes_file)))
+        quotes = list(load_quotes(quote_file=quotes_file))
+        if args.author:
+            author_quotes = [q for q in quotes if q[0].lower() == args.author.lower()]
+            if author_quotes:  # can't take a random from nothing
+                quotes = author_quotes
+        quote = random.choice(list(quotes))
 
     author, quotation = quote
     if args.wrap:
