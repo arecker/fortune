@@ -110,6 +110,8 @@ local quotes = [
   Quote(text="I don't send messages. I just make moves.", author='Mike Tomlin'),
   Quote(text='I have no message if someone spits in your face. Do what comes natural.', author='Mike Tomlin'),
   Quote(text='The meaning of life is to find your gift.  The purpose of life is to give it away.', author='Pablo Picasso'),
+  Quote(text='No block, no rock.', author='Ben Johnson'),
+  Quote(text="We didn't come here to play a safe game.  We came here to break them.", author='Ben Johnson'),
 ];
 
 [[quote.author, quote.text] for quote in quotes]
